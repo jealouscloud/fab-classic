@@ -9,6 +9,7 @@ import posixpath
 import re
 import six
 import subprocess
+import signal
 import sys
 import time
 from glob import glob
@@ -766,6 +767,13 @@ def _execute(channel, command, pty=True, combine_stderr=None,
         if using_pty:
             rows, cols = _pty_size()
             channel.get_pty(width=cols, height=rows)
+
+            def handle_window_change(signum, frame):
+                rows, cols = _pty_size()
+                channel.resize_pty(width=cols, height=rows)
+
+            if hasattr(signal, "SIGWINCH"):
+                signal.signal(signal.SIGWINCH, handle_window_change)
 
         # Use SSH agent forwarding from 'ssh' if enabled by user
         config_agent = ssh_config().get('forwardagent', 'no').lower() == 'yes'
